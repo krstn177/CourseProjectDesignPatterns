@@ -46,5 +46,47 @@ namespace CourseProject.Services
 
             Console.WriteLine("═══════════════════════════════════════════════\n");
         }
+
+        /// <summary>
+        /// Generates statistics data in a format-agnostic structure for export.
+        /// </summary>
+        public StatisticsData GenerateStatisticsData()
+        {
+            var materials = _library.Materials.GetAll();
+            var users = _library.Users.GetAll();
+
+            return new StatisticsData
+            {
+                TotalMaterials = materials.Count,
+                AvailableMaterials = materials.Count(m => m.IsAvailable),
+                BorrowedMaterials = materials.Count(m => !m.IsAvailable),
+                TotalUsers = users.Count,
+                TotalPenalties = users.Sum(u => u.PenaltyBalance),
+
+                TopBorrowedMaterials = materials
+                    .OrderByDescending(m => m.BorrowCount)
+                    .Take(10)
+                    .Select(m => new MaterialStatistic
+                    {
+                        Title = m.Title,
+                        Author = m.Author,
+                        Type = m.MaterialType,
+                        BorrowCount = m.BorrowCount
+                    })
+                    .ToList(),
+
+                MostActiveUsers = users
+                    .OrderByDescending(u => u.BorrowedMaterialIds.Count)
+                    .Take(10)
+                    .Select(u => new UserStatistic
+                    {
+                        Name = u.Name,
+                        Role = u.Role,
+                        ActiveBorrows = u.BorrowedMaterialIds.Count,
+                        PenaltyBalance = u.PenaltyBalance
+                    })
+                    .ToList()
+            };
+        }
     }
 }

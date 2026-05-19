@@ -7,6 +7,7 @@ using CourseProject.States;
 using CourseProject.Strategies;
 using CourseProject.Observers;
 using CourseProject.Utilities;
+using CourseProject.Adapters;
 
 namespace CourseProject
 {
@@ -33,7 +34,7 @@ namespace CourseProject
             while (running)
             {
                 DisplayMainMenu();
-                int choice = ConsoleHelper.ReadMenuChoice(1, 10);
+                int choice = ConsoleHelper.ReadMenuChoice(1, 11);
                 Console.WriteLine();
 
                 switch (choice)
@@ -44,10 +45,11 @@ namespace CourseProject
                     case 4: ReturnMaterial(); break;
                     case 5: ReserveMaterial(); break;
                     case 6: _stats.DisplayStatistics(); break;
-                    case 7: UndoLastOperation(); break;
-                    case 8: _library.SaveAll(); break;
-                    case 9: _library.LoadAll(); break;
-                    case 10: running = false; _library.SaveAll(); break;
+                    case 7: ExportStatistics(); break;
+                    case 8: UndoLastOperation(); break;
+                    case 9: _library.SaveAll(); break;
+                    case 10: _library.LoadAll(); break;
+                    case 11: running = false; _library.SaveAll(); break;
                 }
             }
 
@@ -63,10 +65,11 @@ namespace CourseProject
             Console.WriteLine("│  4. Return Material                 │");
             Console.WriteLine("│  5. Reserve Material                │");
             Console.WriteLine("│  6. View Statistics                 │");
-            Console.WriteLine("│  7. Undo Last Operation             │");
-            Console.WriteLine("│  8. Save Data                       │");
-            Console.WriteLine("│  9. Load Data                       │");
-            Console.WriteLine("│  10. Exit                           │");
+            Console.WriteLine("│  7. Export Statistics               │");
+            Console.WriteLine("│  8. Undo Last Operation             │");
+            Console.WriteLine("│  9. Save Data                       │");
+            Console.WriteLine("│  10. Load Data                      │");
+            Console.WriteLine("│  11. Exit                           │");
             Console.WriteLine("└─────────────────────────────────────┘");
         }
 
@@ -361,7 +364,34 @@ namespace CourseProject
             Console.WriteLine($"  Reservation created. You will be notified when '{material.Title}' is available.");
         }
 
-        //UNDO
+        // ─── EXPORT STATISTICS ───
+        static void ExportStatistics()
+        {
+            Console.WriteLine("  Select export format:");
+            Console.WriteLine("  1. CSV (Comma-Separated Values)");
+            Console.WriteLine("  2. JSON (JavaScript Object Notation)");
+            int formatChoice = ConsoleHelper.ReadMenuChoice(1, 2);
+
+            IDataExporter exporter = formatChoice switch
+            {
+                1 => new CsvDataExporter(),
+                2 => new JsonDataExporter(),
+                _ => new CsvDataExporter()
+            };
+
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string fileName = $"library_statistics_{timestamp}{exporter.FileExtension}";
+            string filePath = Path.Combine("exports", fileName);
+
+            // Generate statistics data
+            var statsData = _stats.GenerateStatisticsData();
+
+            // Create and execute export command
+            var command = new ExportStatisticsCommand(statsData, exporter, filePath);
+            _library.CommandHistory.ExecuteCommand(command);
+        }
+
+        // ─── UNDO ───
         static void UndoLastOperation()
         {
             if (!_library.CommandHistory.Undo())
